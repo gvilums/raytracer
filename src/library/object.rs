@@ -1,8 +1,12 @@
-use super::vec3::Vec3;
+use crate::library::vec3::Vec3;
+
+
+pub mod sphere;
+pub mod cuboid;
 
 pub struct Ray {
-    origin: Vec3,
-    pub(crate) dir: Vec3,
+    pub origin: Vec3,
+    pub dir: Vec3,
 }
 
 impl Ray {
@@ -14,32 +18,12 @@ impl Ray {
 }
 
 pub trait Object {
-    fn intersects(&self, ray: &Ray) -> Option<Vec3>;
+    fn intersects(&self, ray: &Ray) -> Option<(Vec3, Vec3)>;
+    fn properties(&self) -> Properties;
 }
 
-pub struct Sphere {
-    center: Vec3,
-    radius: f64,
-}
-
-impl Sphere {
-    pub fn new(center: Vec3, radius: f64) -> Self {
-        Sphere { center, radius }
-    }
-}
-
-impl Object for Sphere {
-    fn intersects(&self, ray: &Ray) -> Option<Vec3> {
-        let discriminant =
-            ray.dir.dot(&(ray.origin - self.center)).powi(2)
-                - (ray.origin - self.center).dot_self()
-                + self.radius.powi(2);
-
-        if discriminant >= 0. {
-            let base = -ray.dir.dot(&(ray.origin - self.center));
-            Some(ray.origin + ray.dir.scaled(base - discriminant))
-        } else {
-            None
-        }
-    }
+pub struct Properties {
+    pub color: Vec3,
+    pub refraction: f64,
+    pub reflection: f64,
 }

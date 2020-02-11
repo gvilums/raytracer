@@ -1,5 +1,5 @@
 use std::ops::{Add, Sub};
-use std::fmt::{Display, Debug};
+use std::fmt::Debug;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Vec3 {
