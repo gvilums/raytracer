@@ -1,4 +1,4 @@
-use crate::library::{object::{sphere::Sphere, Ray, Object}, tracer::RayIter};
+use crate::library::object::{sphere::Sphere, Ray, Object};
 use nalgebra::Vector3;
 use nalgebra::geometry::Rotation3;
 use nalgebra::Unit;
@@ -32,8 +32,8 @@ fn main() {
         Vector3::new(1f64, 0f64, 0f64),
         Vector3::new(0f64, 1f64, 0f64),
         std::f64::consts::PI * 1. / 3.,
-        640,
-        480,
+        600,
+        400,
         objects,
         lights,
     )

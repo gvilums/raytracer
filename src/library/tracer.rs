@@ -12,14 +12,10 @@ pub fn trace(
     scene: &Vec<Box<dyn Object + Sync>>,
     bounce_limit: usize,
     lights: &Vec<Light>,
-    log: bool,
 ) -> Vector3<f64> {
     let res = find_closest_intersect(ray, scene);
     if let Some((intersect, normal, obj)) = res {
-        let mut brightness = 0f64;
-        let mut total_brightness_pot = 0f64;
-
-        let b: f64 = lights.par_iter().map(|light| {
+        let brightness: f64 = lights.par_iter().map(|light| {
             let l_ray = Ray::new(intersect, light.pos - intersect);
             let mut blocked = false;
             for obj in scene {
@@ -28,30 +24,10 @@ pub fn trace(
                     break;
                 }
             }
-            if blocked {
-                0.
-            } else {
-                light.brightness
-            }
+            if blocked { 0. } else { light.brightness }
         }).sum();
-        let total_brightness: f64 = lights.iter().map(|light| light.brightness).sum();
-
-        for light in lights {
-            let l_ray = Ray::new(intersect, light.pos - intersect);
-            let mut blocked = false;
-            for obj in scene {
-                if let Some((block_point, _)) = obj.intersects(&l_ray) {
-                    blocked = true;
-                    break;
-                }
-            }
-            if !blocked {
-                brightness += light.brightness;
-            }
-
-            total_brightness_pot += light.brightness;
-        }
-        obj.properties().color.scale(brightness / total_brightness_pot)
+        let potential: f64 = lights.par_iter().map(|light| light.brightness).sum();
+        obj.properties().color.scale(brightness / potential)
     } else {
         Vector3::new(1f64, 1f64, 1f64)
     }
@@ -125,6 +101,26 @@ pub fn trace_all(
         * Rotation3::from_axis_angle(&h_unit, fov_vertical / (height - 1) as f64)
         * Rotation3::from_axis_angle(&v_unit, fov_horizontal / 2f64);
 
+    // calculate the view vector for each pixel
+    let mut pixel_vectors: Vec<(u32, u32, Vector3<f64>)> = Vec::new();
+    let h_rot_mat = Rotation3::from_axis_angle(&v_unit, fov_horizontal / (width - 1) as f64);
+    for y in 0..height {
+        let mut scan = curr_scan_start;
+        for x in 0..width {
+            pixel_vectors.push((x, y, scan));
+            scan = h_rot_mat * scan;
+        }
+        curr_scan_start = v_rot_mat * curr_scan_start;
+    }
+
+    // calculate the color of each pixel
+    let pixel_colors: Vec<(u32, u32, Vector3<f64>)> = pixel_vectors
+        .par_iter()
+        .map(|(x, y, v)| {
+            let ray = Ray::new(pos, *v);
+            (*x, *y, trace(&ray, &scene, 5, &lights))
+        })
+        .collect();
 
     // temporary write to image
     let mut imgbuf = image::ImageBuffer::new(width, height);
@@ -132,57 +128,14 @@ pub fn trace_all(
         *pixel = Rgb([255u8, 255u8, 255u8]);
     }
 
-    // loop for iterating through all scan lines
-    for y in 0..height {
-        let mut scan_line = RayIter::new(
-            curr_scan_start,
-            Unit::new_normalize(view_vertical),
-            fov_horizontal,
-            width
-        );
-        curr_scan_start = v_rot_mat * curr_scan_start;
-
-        for (x, v) in scan_line.enumerate() {
-            let ray = Ray::new(pos, v);
-
-            let color_vec = trace(&ray, &scene, 5, &lights, x == 40 && y == 25);
-            let color = Rgb([
-                (255. * color_vec[0]) as u8,
-                (255. * color_vec[1]) as u8,
-                (255. * color_vec[2]) as u8
-            ]);
-            imgbuf.put_pixel(x as u32, y, color);
-        }
-    }
-
+    // write the pixel colors to the image
+    pixel_colors.iter().for_each(|(x, y, color_vec)| {
+        let color = Rgb([
+            (255. * color_vec[0]) as u8,
+            (255. * color_vec[1]) as u8,
+            (255. * color_vec[2]) as u8
+        ]);
+        imgbuf.put_pixel(*x, *y, color);
+    });
     imgbuf.save("out.png").unwrap();
-}
-
-pub struct RayIter {
-    mat: Rotation3<f64>,
-    current: Vector3<f64>,
-    count: u32,
-    limit: u32,
-}
-
-impl RayIter {
-    pub fn new(initial: Vector3<f64>, rot_axis: Unit<Vector3<f64>>, total_angle: f64, limit: u32) -> Self {
-        let mat = Rotation3::from_axis_angle(&rot_axis, total_angle / (limit - 1) as f64);
-        RayIter { mat, current: initial, count: 0, limit }
-    }
-}
-
-impl Iterator for RayIter {
-    type Item = Vector3<f64>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.count == self.limit {
-            None
-        } else {
-            self.count += 1;
-            let out = self.current;
-            self.current = self.mat * self.current;
-            Some(out)
-        }
-    }
 }
