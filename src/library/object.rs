@@ -1,29 +1,30 @@
-use crate::library::vec3::Vec3;
-
+use nalgebra::Vector3;
 
 pub mod sphere;
 pub mod cuboid;
+pub mod plane;
 
+#[derive(Copy, Clone)]
 pub struct Ray {
-    pub origin: Vec3,
-    pub dir: Vec3,
+    pub origin: Vector3<f64>,
+    pub dir: Vector3<f64>,
 }
 
 impl Ray {
-    pub fn new(origin: Vec3, direction: Vec3) -> Self {
+    pub fn new(origin: Vector3<f64>, direction: Vector3<f64>) -> Self {
         let mut ray = Ray { origin, dir: direction };
-        ray.dir.norm();
+        ray.dir.normalize_mut();
         ray
     }
 }
 
 pub trait Object {
-    fn intersects(&self, ray: &Ray) -> Option<(Vec3, Vec3)>;
+    fn intersects(&self, ray: &Ray) -> Option<(Vector3<f64>, Vector3<f64>)>;
     fn properties(&self) -> Properties;
 }
 
 pub struct Properties {
-    pub color: Vec3,
+    pub color: Vector3<f64>,
     pub refraction: f64,
     pub reflection: f64,
 }
