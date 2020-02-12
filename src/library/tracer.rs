@@ -1,8 +1,6 @@
 use crate::library::object::{Ray, Object};
-use nalgebra::{Vector3, Rotation3, Unit};
-
-use image::{GenericImage, GenericImageView, ImageBuffer, RgbImage, Rgb};
 use crate::library::light::Light;
+use nalgebra::{Vector3, Rotation3, Unit};
 use rayon::prelude::*;
 
 /// returns the color to be assigned to @param ray
@@ -10,16 +8,16 @@ use rayon::prelude::*;
 pub fn trace(
     ray: &Ray,
     scene: &Vec<Box<dyn Object + Sync>>,
-    bounce_limit: usize,
+    _bounce_limit: usize,
     lights: &Vec<Light>,
 ) -> Vector3<f64> {
     let res = find_closest_intersect(ray, scene);
-    if let Some((intersect, normal, obj)) = res {
+    if let Some((intersect, _normal, obj)) = res {
         let brightness: f64 = lights.par_iter().map(|light| {
             let l_ray = Ray::new(intersect, light.pos - intersect);
             let mut blocked = false;
             for obj in scene {
-                if let Some((block_point, _)) = obj.intersects(&l_ray) {
+                if let Some(_) = obj.intersects(&l_ray) {
                     blocked = true;
                     break;
                 }
@@ -82,7 +80,7 @@ pub fn trace_all(
     width: u32, height: u32,
     scene: Vec<Box<dyn Object + Sync>>,
     lights: Vec<Light>,
-) -> () {
+) -> Vec<(u32, u32, Vector3<f64>)> {
     let fov_horizontal = fov;
     let fov_vertical = fov * height as f64 / width as f64;
 
@@ -122,20 +120,5 @@ pub fn trace_all(
         })
         .collect();
 
-    // temporary write to image
-    let mut imgbuf = image::ImageBuffer::new(width, height);
-    for pixel in imgbuf.pixels_mut() {
-        *pixel = Rgb([255u8, 255u8, 255u8]);
-    }
-
-    // write the pixel colors to the image
-    pixel_colors.iter().for_each(|(x, y, color_vec)| {
-        let color = Rgb([
-            (255. * color_vec[0]) as u8,
-            (255. * color_vec[1]) as u8,
-            (255. * color_vec[2]) as u8
-        ]);
-        imgbuf.put_pixel(*x, *y, color);
-    });
-    imgbuf.save("out.png").unwrap();
+    pixel_colors
 }

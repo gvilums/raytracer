@@ -1,4 +1,4 @@
-use nalgebra::{Vector3, Matrix, U1, Vector};
+use nalgebra::Vector3;
 use crate::library::object::{Object, Ray, Properties};
 
 pub struct Plane {

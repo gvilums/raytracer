@@ -23,6 +23,7 @@ pub trait Object {
     fn properties(&self) -> Properties;
 }
 
+#[derive(Copy, Clone)]
 pub struct Properties {
     pub color: Vector3<f64>,
     pub refraction: f64,

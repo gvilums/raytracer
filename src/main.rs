@@ -1,10 +1,9 @@
-use crate::library::object::{sphere::Sphere, Ray, Object};
+use crate::library::object::{sphere::Sphere, Object};
 use nalgebra::Vector3;
-use nalgebra::geometry::Rotation3;
-use nalgebra::Unit;
 use crate::library::tracer::trace_all;
 use crate::library::light::Light;
 use crate::library::object::plane::Plane;
+use image::Rgb;
 
 mod library;
 
@@ -27,16 +26,36 @@ fn main() {
         }
     }
 
-    trace_all(
+    let width = 600;
+    let height = 400;
+
+    let pixel_colors = trace_all(
         Vector3::new(0f64, 0f64, -50f64),
         Vector3::new(1f64, 0f64, 0f64),
         Vector3::new(0f64, 1f64, 0f64),
         std::f64::consts::PI * 1. / 3.,
-        600,
-        400,
+        width,
+        height,
         objects,
         lights,
-    )
+    );
+
+    // temporary write to image
+    let mut imgbuf = image::ImageBuffer::new(width, height);
+    for pixel in imgbuf.pixels_mut() {
+        *pixel = Rgb([255u8, 255u8, 255u8]);
+    }
+
+    // write the pixel colors to the image
+    pixel_colors.iter().for_each(|(x, y, color_vec)| {
+        let color = Rgb([
+            (255. * color_vec[0]) as u8,
+            (255. * color_vec[1]) as u8,
+            (255. * color_vec[2]) as u8
+        ]);
+        imgbuf.put_pixel(*x, *y, color);
+    });
+    imgbuf.save("out.png").unwrap();
 }
 
 
