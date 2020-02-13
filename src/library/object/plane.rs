@@ -1,19 +1,19 @@
-use nalgebra::Vector3;
+use nalgebra::{Vector3, Unit};
 use crate::library::object::{Object, Ray, Properties};
 
 pub struct Plane {
     pub origin: Vector3<f64>,
-    pub normal: Vector3<f64>
+    pub normal: Unit<Vector3<f64>>
 }
 
 impl Plane {
-    pub fn new(pos: Vector3<f64>, normal: Vector3<f64>) -> Self {
-        Plane { origin: pos, normal }
+    pub fn new(pos: Vector3<f64>, norm_vec: Vector3<f64>) -> Self {
+        Plane { origin: pos, normal: Unit::new_normalize(norm_vec) }
     }
 }
 
 impl Object for Plane {
-    fn intersects(&self, ray: &Ray) -> Option<(Vector3<f64>, Vector3<f64>)> {
+    fn intersects(&self, ray: &Ray) -> Option<(Vector3<f64>, Unit<Vector3<f64>>)> {
         let num = (self.origin - ray.origin).dot(&self.normal);
         let denom = ray.dir.dot(&self.normal);
         if denom.abs() > 0.001 && num / denom > 0.001 {
@@ -26,9 +26,9 @@ impl Object for Plane {
 
     fn properties(&self) -> Properties {
         Properties {
-            color: Vector3::new(0.65, 0.8, 0.8),
-            refraction: 0.0,
-            reflection: 0.0
+            color: Vector3::new(0.8, 0.8, 0.8),
+            specular: Vector3::new(0f64, 0f64, 0f64),
+            albedo: Vector3::new(0f64, 0f64, 0f64),
         }
     }
 }

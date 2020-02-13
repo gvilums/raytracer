@@ -1,4 +1,4 @@
-use nalgebra::Vector3;
+use nalgebra::{Vector3, Unit};
 
 pub mod sphere;
 pub mod cuboid;
@@ -19,13 +19,23 @@ impl Ray {
 }
 
 pub trait Object {
-    fn intersects(&self, ray: &Ray) -> Option<(Vector3<f64>, Vector3<f64>)>;
+    fn intersects(&self, ray: &Ray) -> Option<(Vector3<f64>, Unit<Vector3<f64>>)>;
     fn properties(&self) -> Properties;
 }
 
 #[derive(Copy, Clone)]
 pub struct Properties {
     pub color: Vector3<f64>,
-    pub refraction: f64,
-    pub reflection: f64,
+    pub specular: Vector3<f64>,
+    pub albedo: Vector3<f64>,
+}
+
+impl Default for Properties {
+    fn default() -> Self {
+        Properties {
+            color: Vector3::new(1f64, 0.5f64, 0f64),
+            specular: Vector3::new(0f64, 0f64, 0f64),
+            albedo: Vector3::new(0f64, 0f64, 0f64),
+        }
+    }
 }

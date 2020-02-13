@@ -4,15 +4,23 @@ use nalgebra::{Vector3, Rotation3, Unit};
 use rayon::prelude::*;
 
 /// returns the color to be assigned to @param ray
-///
 pub fn trace(
     ray: &Ray,
     scene: &Vec<Box<dyn Object + Sync>>,
-    _bounce_limit: usize,
+    bounce_limit: usize,
     lights: &Vec<Light>,
 ) -> Vector3<f64> {
     let res = find_closest_intersect(ray, scene);
-    if let Some((intersect, _normal, obj)) = res {
+    if let Some((intersect, normal, obj)) = res {
+        // reflection color, calculated only if the object has reflective properties
+//        let reflect_color =if bounce_limit > 0 {
+//            let out_dir =
+//                Rotation3::from_axis_angle(&normal, std::f64::consts::PI) * ray.dir.scale(-1.);
+//            let out_ray = Ray::new(intersect, out_dir);
+//            Some(trace(&out_ray, scene, bounce_limit - 1, lights))
+//        } else { None };
+
+        // diffuse color
         let brightness: f64 = lights.par_iter().map(|light| {
             let l_ray = Ray::new(intersect, light.pos - intersect);
             let mut blocked = false;
@@ -25,9 +33,17 @@ pub fn trace(
             if blocked { 0. } else { light.brightness }
         }).sum();
         let potential: f64 = lights.par_iter().map(|light| light.brightness).sum();
-        obj.properties().color.scale(brightness / potential)
+        let opaque_col = obj.properties().color.scale(0.3 + 0.7 * brightness / potential);
+
+//        if let Some(ref_col) = reflect_color {
+//            opaque_col.scale(obj.properties().light_interaction[0])
+//                + ref_col.scale(obj.properties().light_interaction[1])
+//        } else {
+            opaque_col
+//        }
     } else {
-        Vector3::new(1f64, 1f64, 1f64)
+        // no intersects, ray is sky color
+        Vector3::new(110f64, 181f64, 190f64).scale(1. / 255.)
     }
 }
 
@@ -37,7 +53,7 @@ pub fn trace(
 fn find_closest_intersect<'a>(
     ray: &Ray,
     scene: &'a Vec<Box<dyn Object + Sync>>
-) -> Option<(Vector3<f64>, Vector3<f64>, &'a Box<dyn Object + Sync>)> {
+) -> Option<(Vector3<f64>, Unit<Vector3<f64>>, &'a Box<dyn Object + Sync>)> {
     let mut intersect_opt = None;
     let mut normal_opt = None;
     let mut closest_obj_opt = None;
@@ -73,19 +89,31 @@ fn find_closest_intersect<'a>(
 /// and the y-axis extending upwards
 ///
 pub fn trace_all(
+    pixel_vectors: Vec<(u32, u32, Vector3<f64>)>,
     pos: Vector3<f64>,
-    view_horizontal: Vector3<f64>,
-    view_vertical: Vector3<f64>,
-    fov: f64, // angle in radians
-    width: u32, height: u32,
     scene: Vec<Box<dyn Object + Sync>>,
     lights: Vec<Light>,
 ) -> Vec<(u32, u32, Vector3<f64>)> {
+    pixel_vectors
+        .par_iter()
+        .map(|(x, y, v)| {
+            let ray = Ray::new(pos, *v);
+            (*x, *y, trace(&ray, &scene, 5, &lights))
+        })
+        .collect()
+}
+
+/// generates a view based on a sub-sphere of vision
+pub fn spherical_view(
+    view_horizontal: Vector3<f64>,
+    view_vertical: Vector3<f64>,
+    fov: f64,
+    width: u32,
+    height: u32
+) -> Vec<(u32, u32, Vector3<f64>)> {
     let fov_horizontal = fov;
     let fov_vertical = fov * height as f64 / width as f64;
-
     let view_dir = view_horizontal.cross(&view_vertical);
-
     let v_unit = Unit::new_normalize(view_vertical);
     let h_unit = Unit::new_normalize(view_horizontal);
 
@@ -99,9 +127,11 @@ pub fn trace_all(
         * Rotation3::from_axis_angle(&h_unit, fov_vertical / (height - 1) as f64)
         * Rotation3::from_axis_angle(&v_unit, fov_horizontal / 2f64);
 
+    // the horizontal rotation matrix for moving the scan along the current scan line
+    let h_rot_mat = Rotation3::from_axis_angle(&v_unit, fov_horizontal / (width - 1) as f64);
+
     // calculate the view vector for each pixel
     let mut pixel_vectors: Vec<(u32, u32, Vector3<f64>)> = Vec::new();
-    let h_rot_mat = Rotation3::from_axis_angle(&v_unit, fov_horizontal / (width - 1) as f64);
     for y in 0..height {
         let mut scan = curr_scan_start;
         for x in 0..width {
@@ -110,15 +140,5 @@ pub fn trace_all(
         }
         curr_scan_start = v_rot_mat * curr_scan_start;
     }
-
-    // calculate the color of each pixel
-    let pixel_colors: Vec<(u32, u32, Vector3<f64>)> = pixel_vectors
-        .par_iter()
-        .map(|(x, y, v)| {
-            let ray = Ray::new(pos, *v);
-            (*x, *y, trace(&ray, &scene, 5, &lights))
-        })
-        .collect();
-
-    pixel_colors
+    pixel_vectors
 }
