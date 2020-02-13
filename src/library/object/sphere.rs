@@ -13,12 +13,8 @@ impl Sphere {
         Sphere { center, radius, properties: Properties::default() }
     }
 
-    pub fn set_properties(&mut self, color: Vector3<f64>, specular: Vector3<f64>, albedo: Vector3<f64>) {
-        self.properties = Properties {
-            color,
-            specular,
-            albedo
-        };
+    pub fn set_properties(&mut self, specular: Vector3<f64>, albedo: Vector3<f64>) {
+        self.properties = Properties { specular, albedo };
     }
 }
 

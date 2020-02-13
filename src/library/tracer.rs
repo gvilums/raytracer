@@ -3,49 +3,69 @@ use crate::library::light::Light;
 use nalgebra::{Vector3, Rotation3, Unit};
 use rayon::prelude::*;
 
+
 /// returns the color to be assigned to @param ray
-pub fn trace(
-    ray: &Ray,
+pub fn trace_view_ray(
+    ray: Ray,
     scene: &Vec<Box<dyn Object + Sync>>,
     bounce_limit: usize,
     lights: &Vec<Light>,
 ) -> Vector3<f64> {
-    let res = find_closest_intersect(ray, scene);
-    if let Some((intersect, normal, obj)) = res {
-        // reflection color, calculated only if the object has reflective properties
-//        let reflect_color =if bounce_limit > 0 {
-//            let out_dir =
-//                Rotation3::from_axis_angle(&normal, std::f64::consts::PI) * ray.dir.scale(-1.);
-//            let out_ray = Ray::new(intersect, out_dir);
-//            Some(trace(&out_ray, scene, bounce_limit - 1, lights))
-//        } else { None };
+    let mut current_ray = ray;
+    let mut energy: Vector3<f64> = Vector3::new(1f64, 1f64, 1f64);
+    let mut bounces = 0;
+    let mut result = Vector3::new(0f64, 0f64, 0f64);
+    while bounces < bounce_limit && (energy[0] > 0.01 || energy[1] > 0.01 || energy[2] > 0.01) {
+        let hit = find_closest_intersect(&current_ray, scene);
+        if let Some((intersect, normal, obj)) = hit {
+            // reflect the current ray
+            let out_dir =
+                Rotation3::from_axis_angle(&normal, std::f64::consts::PI) * ray.dir.scale(-1.);
+            current_ray = Ray::new(intersect, out_dir);
 
-        // diffuse color
-        let brightness: f64 = lights.par_iter().map(|light| {
-            let l_ray = Ray::new(intersect, light.pos - intersect);
-            let mut blocked = false;
-            for obj in scene {
-                if let Some(_) = obj.intersects(&l_ray) {
-                    blocked = true;
-                    break;
-                }
-            }
-            if blocked { 0. } else { light.brightness }
-        }).sum();
-        let potential: f64 = lights.par_iter().map(|light| light.brightness).sum();
-        let opaque_col = obj.properties().color.scale(0.3 + 0.7 * brightness / potential);
+            // calculates the diffuse color of the intersect point
+            let mut diffuse: Vector3<f64> = lights
+                .par_iter()
+                .map(|light| {
+                    let l_ray = Ray::new(intersect, light.pos - intersect);
+                    let mut blocked = false;
+                    for obj in scene {
+                        if let Some(_) = obj.intersects(&l_ray) {
+                            blocked = true;
+                            break;
+                        }
+                    }
+                    if blocked {
+                        Vector3::new(0f64, 0f64, 0f64)
+                    } else {
+                        obj.properties().albedo
+                            .component_mul(&light.color)
+                            .scale(normal.dot(&l_ray.dir.normalize()))
+                    }
+                })
+                .sum();
+            diffuse.scale_mut(1. / lights.len() as f64);
 
-//        if let Some(ref_col) = reflect_color {
-//            opaque_col.scale(obj.properties().light_interaction[0])
-//                + ref_col.scale(obj.properties().light_interaction[1])
-//        } else {
-            opaque_col
-//        }
-    } else {
-        // no intersects, ray is sky color
-        Vector3::new(110f64, 181f64, 190f64).scale(1. / 255.)
+            result += energy.component_mul(&diffuse);
+
+            energy.component_mul_assign(&obj.properties().specular);
+        } else {
+            // ray hits the sky, result has sky color added
+            result += energy.component_mul(&Vector3::new(255f64, 255f64, 255f64).scale(1. / 255.));
+            break; // after the ray hits the sky no more bounces should be calculated
+        }
+        bounces += 1;
     }
+    // clamps the values of result to be below 1.0
+    for i in 0..3 {
+        if result[i] > 1.0 {
+            result[i] = 1.0;
+        }
+    }
+    result
 }
+
+
 
 /// Returns the closest point of intersection between @param ray and an object in @param scene
 /// which is the closest to the ray's origin, ignoring any intersect which is very close to the
@@ -78,6 +98,7 @@ fn find_closest_intersect<'a>(
     }
 }
 
+
 /// returns the color for every pixel in a grid sized width * height
 ///
 /// @param view_horizontal: The x-axis of the resulting projection
@@ -98,10 +119,11 @@ pub fn trace_all(
         .par_iter()
         .map(|(x, y, v)| {
             let ray = Ray::new(pos, *v);
-            (*x, *y, trace(&ray, &scene, 5, &lights))
+            (*x, *y, trace_view_ray(ray, &scene, 8, &lights))
         })
         .collect()
 }
+
 
 /// generates a view based on a sub-sphere of vision
 pub fn spherical_view(
@@ -141,4 +163,16 @@ pub fn spherical_view(
         curr_scan_start = v_rot_mat * curr_scan_start;
     }
     pixel_vectors
+}
+
+
+/// generates a view based on a planar projection
+pub fn orthonormal_view(
+    view_horizontal: Vector3<f64>,
+    view_vertical: Vector3<f64>,
+    fov: f64,
+    width: u32,
+    height: u32
+) -> Vec<(u32, u32, Vector3<f64>)> {
+    unimplemented!()
 }

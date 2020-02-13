@@ -3,12 +3,21 @@ use crate::library::object::{Object, Ray, Properties};
 
 pub struct Plane {
     pub origin: Vector3<f64>,
-    pub normal: Unit<Vector3<f64>>
+    pub normal: Unit<Vector3<f64>>,
+    properties: Properties,
 }
 
 impl Plane {
     pub fn new(pos: Vector3<f64>, norm_vec: Vector3<f64>) -> Self {
-        Plane { origin: pos, normal: Unit::new_normalize(norm_vec) }
+        Plane {
+            origin: pos,
+            normal: Unit::new_normalize(norm_vec),
+            properties: Properties::default()
+        }
+    }
+
+    pub fn set_properties(&mut self, specular: Vector3<f64>, albedo: Vector3<f64>) {
+        self.properties = Properties { specular, albedo }
     }
 }
 
@@ -25,10 +34,6 @@ impl Object for Plane {
     }
 
     fn properties(&self) -> Properties {
-        Properties {
-            color: Vector3::new(0.8, 0.8, 0.8),
-            specular: Vector3::new(0f64, 0f64, 0f64),
-            albedo: Vector3::new(0f64, 0f64, 0f64),
-        }
+        self.properties
     }
 }

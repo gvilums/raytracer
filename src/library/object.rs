@@ -25,7 +25,7 @@ pub trait Object {
 
 #[derive(Copy, Clone)]
 pub struct Properties {
-    pub color: Vector3<f64>,
+//    pub color: Vector3<f64>,
     pub specular: Vector3<f64>,
     pub albedo: Vector3<f64>,
 }
@@ -33,8 +33,8 @@ pub struct Properties {
 impl Default for Properties {
     fn default() -> Self {
         Properties {
-            color: Vector3::new(1f64, 0.5f64, 0f64),
-            specular: Vector3::new(0f64, 0f64, 0f64),
+//            color: Vector3::new(1f64, 0.5f64, 0f64),
+            specular: Vector3::new(1f64, 0.78f64, 0.34f64),
             albedo: Vector3::new(0f64, 0f64, 0f64),
         }
     }
