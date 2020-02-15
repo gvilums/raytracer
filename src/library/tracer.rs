@@ -2,14 +2,16 @@ use crate::library::object::{Ray, Object};
 use crate::library::light::{PointLight, Lighting};
 use nalgebra::{Vector3, Rotation3, Unit};
 use rayon::prelude::*;
+use image::{DynamicImage, GenericImageView};
 
 
 /// returns the color to be assigned to @param ray
-pub fn trace_view_ray(
+fn trace_view_ray(
     ray: Ray,
     scene: &Vec<Box<dyn Object + Sync>>,
     bounce_limit: usize,
     lights: &Lighting,
+    skybox: &DynamicImage
 ) -> Vector3<f64> {
     let mut current_ray = ray;
     let mut energy: Vector3<f64> = Vector3::new(1f64, 1f64, 1f64);
@@ -51,7 +53,7 @@ pub fn trace_view_ray(
 
             let mut diffuse_global: Vector3<f64> = lights
                 .globals
-                .iter()
+                .par_iter()
                 .map(|light| {
                     let l_ray = Ray::new(intersect, light.dir.scale(-1.));
                     let mut blocked = false;
@@ -76,14 +78,13 @@ pub fn trace_view_ray(
             let diffuse = diffuse_point.scale(lights.point_global_ratio)
                 + diffuse_global.scale(1. - lights.point_global_ratio);
 
-//            println!("{:?}", diffuse);
-
             result += energy.component_mul(&diffuse);
             // scale the remaining energy by the specular absorption properties of the current obj
             energy.component_mul_assign(&obj.properties().specular);
         } else {
-            // ray hits the sky, result has sky color added
-            result += energy.component_mul(&Vector3::new(255f64, 255f64, 255f64).scale(1. / 255.));
+            // ray hits the sky, result has sky color added]
+            let sky_color = sample_skybox(&current_ray.dir, skybox);
+            result += energy.component_mul(&sky_color);
             break; // after the ray hits the sky no more bounces should be calculated
         }
         bounces += 1;
@@ -95,6 +96,19 @@ pub fn trace_view_ray(
         }
     }
     result
+}
+
+
+/// Returns the color of the point in the skybox that vector @param dir would hit
+fn sample_skybox(dir: &Vector3<f64>, skybox: &DynamicImage) -> Vector3<f64> {
+    let y = (dir[1].acos() / std::f64::consts::PI
+        * skybox.height() as f64) as u32;
+    let x = ((dir[0].atan2(-1. * dir[2]) / std::f64::consts::PI / 2. + 0.5)
+        * skybox.width() as f64) as u32;
+
+    let pixel = skybox.get_pixel(x, y);
+    let sky_color = Vector3::new(pixel.0[0] as f64, pixel.0[1] as f64, pixel.0[2] as f64);
+    sky_color.scale(1. / 128.)
 }
 
 
@@ -145,18 +159,19 @@ pub fn trace_all(
     pos: Vector3<f64>,
     scene: Vec<Box<dyn Object + Sync>>,
     lights: Lighting,
+    skybox: &DynamicImage,
 ) -> Vec<(u32, u32, Vector3<f64>)> {
     pixel_vectors
         .par_iter()
         .map(|(x, y, v)| {
             let ray = Ray::new(pos, *v);
-            (*x, *y, trace_view_ray(ray, &scene, 8, &lights))
+            (*x, *y, trace_view_ray(ray, &scene, 8, &lights, skybox))
         })
         .collect()
 }
 
 
-/// generates a view based on a sub-sphere of vision
+/// generates a view based on a spherical projection
 pub fn spherical_view(
     view_horizontal: Vector3<f64>,
     view_vertical: Vector3<f64>,
