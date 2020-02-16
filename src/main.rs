@@ -16,7 +16,7 @@ fn main() {
     let mut s2 = Sphere::new(Vector3::new(60f64, -25f64, 150f64), 15.);
     let mut s3 = Sphere::new(Vector3::new(25f64, -30f64, 75f64), 10.);
     s2.set_properties(Vector3::new(0.03, 0.03, 0.03), Vector3::new(0., 0.78, 0.34));
-    s1.set_properties(Vector3::new(0.7, 0.7, 0.7), Vector3::new(0., 0., 0.));
+    s1.set_properties(Vector3::new(1f64, 0.78f64, 0.34f64), Vector3::new(0., 0., 0.));
     s3.set_properties(Vector3::new(0.08, 0.08, 0.08), Vector3::new(1., 0.7, 0.2));
     objects.push(Box::new(s1));
     objects.push(Box::new(s2));
@@ -56,8 +56,8 @@ fn main() {
         }
     }
 
-    let width = 3000;
-    let height = 2000;
+    let width = 1500;
+    let height = 1000;
 
     // get a view
     let view = planar_view(

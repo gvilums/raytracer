@@ -11,7 +11,7 @@ pub struct Ray {
 }
 
 impl Ray {
-    pub fn new(origin: Vector3<f64>, direction: Vector3<f64>) -> Self {
+    pub fn new_normalize(origin: Vector3<f64>, direction: Vector3<f64>) -> Self {
         let mut ray = Ray { origin, dir: direction };
         ray.dir.normalize_mut();
         ray

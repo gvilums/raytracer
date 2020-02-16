@@ -52,7 +52,7 @@ pub struct GlobalLight {
 }
 
 impl GlobalLight {
-    pub fn new(dir: Vector3<f64>, color: Vector3<f64>) -> Self {
-        GlobalLight { dir, color }
+    pub fn new(direction: Vector3<f64>, color: Vector3<f64>) -> Self {
+        GlobalLight { dir: direction.normalize(), color }
     }
 }
