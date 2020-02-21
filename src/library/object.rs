@@ -7,14 +7,16 @@ pub mod plane;
 #[derive(Copy, Clone)]
 pub struct Ray {
     pub origin: Vector3<f64>,
-    pub dir: Vector3<f64>,
+    pub dir: Unit<Vector3<f64>>,
 }
 
 impl Ray {
     pub fn new_normalize(origin: Vector3<f64>, direction: Vector3<f64>) -> Self {
-        let mut ray = Ray { origin, dir: direction };
-        ray.dir.normalize_mut();
-        ray
+        Ray { origin, dir: Unit::new_normalize(direction)}
+    }
+
+    pub fn new(origin: Vector3<f64>, dir: Unit<Vector3<f64>>) -> Self {
+        Ray { origin, dir }
     }
 }
 

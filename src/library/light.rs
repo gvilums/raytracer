@@ -34,25 +34,12 @@ impl Lighting {
     }
 }
 
-
 pub struct PointLight {
     pub pos: Vector3<f64>,
     pub color: Vector3<f64>,
 }
 
-impl PointLight {
-    pub fn new(pos: Vector3<f64>, color: Vector3<f64>) -> Self {
-        PointLight { pos, color }
-    }
-}
-
 pub struct GlobalLight {
     pub dir: Vector3<f64>,
     pub color: Vector3<f64>,
-}
-
-impl GlobalLight {
-    pub fn new(direction: Vector3<f64>, color: Vector3<f64>) -> Self {
-        GlobalLight { dir: direction.normalize(), color }
-    }
 }

@@ -1,18 +1,26 @@
 use crate::library::object::{sphere::Sphere, Object};
 use nalgebra::Vector3;
-use crate::library::tracer::{trace_all, spherical_view, planar_view};
-use crate::library::light::{PointLight, Lighting};
+use crate::library::tracer::{trace_all, planar_view};
+use crate::library::light::Lighting;
 use crate::library::object::plane::Plane;
-use image::{Rgb, GenericImageView};
+use image::Rgb;
 
 mod library;
 
 
 fn main() {
+    // RENDER PARAMETERS
+    let width = 1500;
+    let height = 1000;
+    let view_horizontal = Vector3::new(1f64, 0f64, 0f64);
+    let view_vertical = Vector3::new(0f64, 1f64, 0.2f64);
+    let fov = std::f64::consts::PI * 1. / 4.;
+    let pos = Vector3::new(0f64, 10f64, -80f64);
     let skybox = image::open("skybox.png").unwrap();
 
+    // SCENE OBJECTS
     let mut objects: Vec<Box<dyn Object + Sync>> = Vec::new();
-    let mut s1 = Sphere::new(Vector3::new(-15f64, -20f64, 100f64), 20.);
+    let mut s1 = Sphere::new(Vector3::new(-25f64, -23f64, 100f64), 17.);
     let mut s2 = Sphere::new(Vector3::new(60f64, -25f64, 150f64), 15.);
     let mut s3 = Sphere::new(Vector3::new(25f64, -30f64, 75f64), 10.);
     s2.set_properties(Vector3::new(0.03, 0.03, 0.03), Vector3::new(0., 0.78, 0.34));
@@ -56,26 +64,11 @@ fn main() {
         }
     }
 
-    let width = 1500;
-    let height = 1000;
-
     // get a view
-    let view = planar_view(
-        Vector3::new(1f64, 0f64, 0f64),
-        Vector3::new(0f64, 1f64, 0.2f64),
-        std::f64::consts::PI * 1. / 4.,
-        width,
-        height,
-    );
+    let view = planar_view(view_horizontal, view_vertical, fov, width, height);
 
     // calculate the colors of each pixel in the view
-    let pixel_colors = trace_all(
-        view,
-        Vector3::new(0f64, 10f64, -80f64),
-        objects,
-        lights,
-        &skybox,
-    );
+    let pixel_colors = trace_all(view, pos, objects, lights, &skybox);
 
     // write the pixel colors to an image
     let mut imgbuf = image::ImageBuffer::new(width, height);
