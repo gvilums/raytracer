@@ -2,4 +2,4 @@
 **/*.rs.bk
 .idea/
 Cargo.lock
-out.png
+.vscode

@@ -1,8 +1,6 @@
 # raytracer
 
-A raytracing implementation written completely in Rust, relying on "nalgebra" for any linear algebra calculations and "rayon" for code parallelization.
+A raytracing implementation written completely in Rust,
+using `nalgebra` for linear algebra and `rayon` for parallel execution.
 
-**TODO**
-- Antialiasing
-- Other shapes
-
+![Rendered Output](/out.png)
